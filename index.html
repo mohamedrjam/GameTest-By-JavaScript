@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Minecraft 2D</title>
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:#87CEEB;
+}
+canvas{
+    display:block;
+}
+#info{
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:white;
+    font-family:Arial;
+    background:rgba(0,0,0,.5);
+    padding:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="info">
+WASD أو الأسهم للحركة<br>
+SPACE للقفز<br>
+زر الفأرة الأيسر: تكسير<br>
+زر الفأرة الأيمن: وضع بلوك
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+const TILE = 32;
+const ROWS = 20;
+const COLS = 100;
+
+let world = [];
+
+for(let y=0;y<ROWS;y++){
+    world[y]=[];
+    for(let x=0;x<COLS;x++){
+        if(y>12) world[y][x]=2;      // تراب
+        else if(y===12) world[y][x]=1; // عشب
+        else world[y][x]=0;
+    }
+}
+
+const player = {
+    x:200,
+    y:100,
+    w:28,
+    h:50,
+    vx:0,
+    vy:0,
+    onGround:false
+};
+
+const keys={};
+
+addEventListener("keydown",e=>keys[e.key]=true);
+addEventListener("keyup",e=>keys[e.key]=false);
+
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+
+canvas.addEventListener("mousedown",e=>{
+    const wx = Math.floor((e.clientX + cameraX)/TILE);
+    const wy = Math.floor(e.clientY/TILE);
+
+    if(wx>=0 && wx<COLS && wy>=0 && wy<ROWS){
+        if(e.button===0){
+            world[wy][wx]=0;
+        }else if(e.button===2){
+            world[wy][wx]=2;
+        }
+    }
+});
+
+let cameraX = 0;
+
+function solid(tx,ty){
+    if(tx<0||tx>=COLS||ty<0||ty>=ROWS) return false;
+    return world[ty][tx]!==0;
+}
+
+function update(){
+
+    if(keys["ArrowLeft"]||keys["a"]) player.vx=-4;
+    else if(keys["ArrowRight"]||keys["d"]) player.vx=4;
+    else player.vx=0;
+
+    if((keys[" "]||keys["ArrowUp"]||keys["w"]) && player.onGround){
+        player.vy=-12;
+        player.onGround=false;
+    }
+
+    player.vy += 0.5;
+
+    player.x += player.vx;
+
+    player.y += player.vy;
+
+    player.onGround=false;
+
+    let left = Math.floor(player.x/TILE);
+    let right = Math.floor((player.x+player.w)/TILE);
+    let bottom = Math.floor((player.y+player.h)/TILE);
+
+    if(solid(left,bottom)||solid(right,bottom)){
+        player.y = bottom*TILE-player.h;
+        player.vy = 0;
+        player.onGround = true;
+    }
+
+    cameraX = player.x - canvas.width/2;
+
+    if(cameraX<0) cameraX=0;
+}
+
+function draw(){
+
+    ctx.fillStyle="#87CEEB";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    for(let y=0;y<ROWS;y++){
+        for(let x=0;x<COLS;x++){
+
+            let px=x*TILE-cameraX;
+            let py=y*TILE;
+
+            if(world[y][x]===1){
+                ctx.fillStyle="#3cb043";
+                ctx.fillRect(px,py,TILE,TILE);
+            }
+
+            if(world[y][x]===2){
+                ctx.fillStyle="#8b5a2b";
+                ctx.fillRect(px,py,TILE,TILE);
+            }
+
+            ctx.strokeStyle="rgba(0,0,0,.1)";
+            ctx.strokeRect(px,py,TILE,TILE);
+        }
+    }
+
+    ctx.fillStyle="red";
+    ctx.fillRect(
+        player.x-cameraX,
+        player.y,
+        player.w,
+        player.h
+    );
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
